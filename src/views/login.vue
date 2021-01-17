@@ -48,6 +48,7 @@ export default {
       })
         .then((response) => {
           this.$store.commit('set', ['userId', response.data.user_id])
+          this.$store.commit('set', ['username', this.username])
           this.$router.push({ path: '/imageWall' })
         })
         .catch((error) => {

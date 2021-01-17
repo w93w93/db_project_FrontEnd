@@ -1,5 +1,8 @@
 <template>
   <div id="app">
+    <nav>
+      <h3><router-link to="/imageWall" class="banner">梗圖收藏平台</router-link></h3>
+    </nav>
     <router-view />
   </div>
 </template>

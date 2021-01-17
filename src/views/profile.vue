@@ -1,79 +1,26 @@
 <template>
-  <div class="imageWall">
+  <div class="profile">
     <div class="row">
-      <div class="col-10">
-        <div class="searchBar">
-          <b-icon icon="search" class="icon"></b-icon>
-          <b-form-input
-            v-model="searchText"
-            placeholder="Search"
-            type="search"
-            class="has-search"
-          ></b-form-input>
-        </div>
-      </div>
-      <div class="col-1">
+      <div class="col">
         <b-icon
-          icon="plus-circle"
-          aria-hidden="true"
-          font-scale="2"
-          variant="info"
-          @click="uploadModal"
+          icon="person-circle"
+          font-scale="12"
+          variant="secondary"
+          class=""
         ></b-icon>
-      </div>
-      <div class="col-1">
-        <b-dropdown
-          size="sm"
-          variant="link"
-          toggle-class="text-decoration-none"
-          no-caret
-          right
-        >
-          <template #button-content>
-            <b-icon
-              icon="person-circle"
-              font-scale="3"
-              variant="secondary"
-            ></b-icon>
-          </template>
-          <b-dropdown-item href="/profile">
-            <span>Profile</span>
-          </b-dropdown-item>
-          <b-dropdown-divider></b-dropdown-divider>
-          <b-dropdown-item @click="logout">
-            <span style="color: red"
-              ><b-icon icon="power"></b-icon> Logout</span
-            >
-          </b-dropdown-item>
-        </b-dropdown>
+        <h2>{{ username }}</h2>
       </div>
     </div>
-    <div class="hashTag">
-      <b-card>
-        <div class="row">
-          <div class="col">
-            <b-button variant="link" @click="getImage"
-              >All</b-button
-            >
+    <b-card>
+      <h4 v-if="items.length == 0">no images</h4>
+      <vue-masonry-wall :items="items" :options="ImageOptions" v-else>
+        <template v-slot:default="{ item }">
+          <div class="Item" @click="showImageInfo(item.id, item.image)">
+            <img :src="item.image" />
           </div>
-          <div class="col" v-for="(v, i) in options" :key="i">
-            <b-button
-              variant="link"
-              @click="searchImagebyTag(v.value)"
-              >#{{ v.text }}</b-button
-            >
-          </div>
-        </div>
-      </b-card>
-    </div>
-    <h4 v-if="items.length == 0">no images</h4>
-    <vue-masonry-wall :items="items" :options="ImageOptions" v-else>
-      <template v-slot:default="{ item }">
-        <div class="Item" @click="showImageInfo(item.id, item.image)">
-          <img :src="item.image" />
-        </div>
-      </template>
-    </vue-masonry-wall>
+        </template>
+      </vue-masonry-wall>
+    </b-card>
     <b-modal
       id="imageInfo"
       ref="imageInfo"
@@ -89,7 +36,7 @@
         <div class="col imgInfo">
           <img :src="img_url" />
           <div class="info">
-            <router-link :to="`/profile/${uploader}/${uploaderId}`">上傳者: {{ uploader }}</router-link>
+            <span>上傳者: {{ uploader }}</span>
             <div class="icons">
               <span @click="clickLiked"
                 ><b-icon icon="hand-thumbs-up" :class="likeClass"></b-icon>
@@ -215,55 +162,29 @@
         </div>
       </div>
     </b-modal>
-    <b-modal
-      id="uploadImage"
-      ref="uploadImage"
-      title="上傳圖片"
-      v-model="imageModalShow"
-      hide-header-close
-      centered
-      @ok="handleOk"
-    >
-      <b-form-group label="Image" label-for="image" label-cols-sm="3">
-        <b-form-file
-          id="image"
-          accept="image/jpeg, image/png"
-          v-model="imageFile"
-        ></b-form-file>
-      </b-form-group>
-
-      <b-form-group label="Title:" label-for="title" label-cols-sm="3">
-        <b-form-input id="title" v-model="title"></b-form-input>
-      </b-form-group>
-      <b-form-group label="Category:" label-for="category" label-cols-sm="3">
-        <b-form-input id="category" v-model="category"></b-form-input>
-      </b-form-group>
-    </b-modal>
   </div>
 </template>
 <script>
 import VueMasonryWall from "vue-masonry-wall";
 import {
-  getImages,
-  search,
+  getUserFavorite,
   imgInfo,
   changeFavorite,
   changeLike,
   rate,
   comment,
   getTags,
-  getImageByTagId,
   getTagByImageId,
-  upload,
   addNewTags,
   addImageTag,
-  removeImageTag
+  removeImageTag,
 } from "@/apis.js";
 export default {
-  name: "imageWall",
+  name: "profile",
   components: { VueMasonryWall },
   data() {
     return {
+      username: null,
       RemoveT: null,
       HashTag: [],
       title: null,
@@ -283,10 +204,8 @@ export default {
       heartIcon: "heart",
       like_count: null,
       uploader: null,
-      uploaderId: null,
       img_url: null,
       modalShow: false,
-      searchText: null,
       ImageOptions: {
         width: 300,
         padding: {
@@ -304,7 +223,7 @@ export default {
       const options = this.options.filter(
         (opt) => this.HashTag.indexOf(opt.text) === -1
       );
-      
+
       // Show all options available
       return options;
     },
@@ -313,27 +232,9 @@ export default {
         (opt) => this.RemoveT.indexOf(opt.text) > -1
       );
       return removeTagId[0].value;
-    }
+    },
   },
   watch: {
-    searchText(val) {
-      this.items = [];
-      search({
-        userId: this.$store.state.userId,
-        content: val,
-      })
-        .then((response) => {
-          for (let i of response.data) {
-            this.items.push({
-              id: i.id,
-              image: `http://localhost:3001${i.url}`,
-            });
-          }
-        })
-        .catch((error) => {
-          console.log(error);
-        });
-    },
     is_favorite(val) {
       if (val) {
         this.heartIcon = "heart-fill";
@@ -352,26 +253,12 @@ export default {
     },
   },
   methods: {
-    append() {
-      for (let i = 0; i < 20; i++) {
-        const id = Math.floor(Math.random() * 1000);
-        const height = Math.floor(Math.random() * 200) + 600;
-        this.items.push({
-          title: `Appended ${i}`,
-          content:
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas non sagittis leo. Vestibulum sit amet metus nec neque dignissim dapibus.",
-          image: `https://picsum.photos/id/${id}/600/${height}`,
-        });
-      }
-    },
-    logout() {
-      this.$store.commit("set", ["userId", null]);
-      this.$router.push({ path: "/" });
-    },
-    getImage() {
-      getImages()
+    getImage(id) {
+      this.items = [];
+      getUserFavorite({
+        userId: id,
+      })
         .then((response) => {
-          this.items = [];
           for (let i of response.data) {
             this.items.push({
               id: i.id,
@@ -407,7 +294,6 @@ export default {
         .then((response) => {
           this.commentItems = [];
           this.rateValue = 0;
-          this.uploaderId = response.data.img.uploader.id;
           this.uploader = response.data.img.uploader.username;
           this.like_count = response.data.like_count;
           this.rating =
@@ -453,7 +339,11 @@ export default {
         imgId: this.imgId,
         on: favorite,
       })
-        .then(() => {})
+        .then(() => {
+          if (!this.$route.params.name) {
+            this.getImage(this.$store.state.userId);
+          }
+        })
         .catch((error) => {
           console.log(error);
         });
@@ -488,6 +378,44 @@ export default {
         .catch((error) => {
           console.log(error);
         });
+    },
+    onOptionClick({ option, addTag }) {
+      addTag(option.text);
+      addImageTag({
+        imgId: this.imgId,
+        userId: this.$store.state.userId,
+        tagId: option.value,
+      })
+        .then(() => {})
+        .catch((error) => {
+          console.log(error);
+        });
+    },
+    RemoveTag({ tag, removeTag }) {
+      this.RemoveT = tag;
+      removeImageTag({
+        imgId: this.imgId,
+        userId: this.$store.state.userId,
+        tagId: this.getRemoveTagId,
+      })
+        .then(() => {
+          removeTag(tag);
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    },
+    async addNewTag() {
+      await addNewTags({
+        tagName: this.newTag,
+      })
+        .then(() => {
+          this.newTag = "";
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+      this.getTag();
     },
     async submit() {
       if (this.rateValue != 0) {
@@ -547,86 +475,16 @@ export default {
           });
       }
     },
-    uploadModal() {
-      this.imageModalShow = true;
-    },
-    async handleOk() {
-      let formData = new FormData();
-      formData.append("file", this.imageFile);
-      formData.append("title", this.title);
-      formData.append("category", this.category);
-      formData.append("user_id", this.$store.state.userId);
-      await upload({
-        form: formData,
-      })
-        .then(() => {
-          this.title = "";
-          this.category = "";
-        })
-        .catch((error) => {
-          console.log(error);
-        });
-
-      this.getImage();
-    },
-    searchImagebyTag(tag_id) {
-      this.items = [];
-      getImageByTagId({
-        tagId: tag_id,
-      })
-        .then((response) => {
-          for (let i of response.data) {
-            this.items.push({
-              id: i.id,
-              image: `http://localhost:3001${i.url}`,
-            });
-          }
-        })
-        .catch((error) => {
-          console.log(error);
-        });
-    },
-    onOptionClick({ option, addTag }) {
-      addTag(option.text);
-      addImageTag({
-        imgId: this.imgId,
-        userId: this.$store.state.userId,
-        tagId: option.value,
-      })
-        .then(() => {})
-        .catch((error) => {
-          console.log(error);
-        });
-    },
-    RemoveTag({ tag, removeTag }) {
-      this.RemoveT = tag;
-      removeImageTag({
-        imgId: this.imgId,
-        userId: this.$store.state.userId,
-        tagId: this.getRemoveTagId,
-      })
-        .then(() => {
-          removeTag(tag);
-        })
-        .catch((error) => {
-          console.log(error);
-        });
-    },
-    async addNewTag() {                                                                                           
-      await addNewTags({
-        tagName: this.newTag,
-      })
-        .then(() => {
-          this.newTag = "";
-        })
-        .catch((error) => {
-          console.log(error);
-        });
-      this.getTag();
-    },
   },
   mounted() {
-    this.getImage();
+    if (this.$route.params.id && this.$route.params.name) {
+      this.getImage(this.$route.params.id);
+      this.username = this.$route.params.name;
+    } else {
+      this.getImage(this.$store.state.userId);
+      this.username = this.$store.state.username;
+    }
+
     this.getTag();
   },
 };
