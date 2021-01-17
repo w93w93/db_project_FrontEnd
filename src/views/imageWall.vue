@@ -12,9 +12,18 @@
           ></b-form-input>
         </div>
       </div>
-      <div class="col-2">
+      <div class="col-1">
+        <b-icon
+          icon="plus-circle"
+          aria-hidden="true"
+          font-scale="2"
+          variant="info"
+          @click="uploadModal"
+        ></b-icon>
+      </div>
+      <div class="col-1">
         <b-dropdown
-          size="lg"
+          size="sm"
           variant="link"
           toggle-class="text-decoration-none"
           no-caret
@@ -32,10 +41,22 @@
           </b-dropdown-item>
           <b-dropdown-divider></b-dropdown-divider>
           <b-dropdown-item @click="logout">
-            <span style="color: red;"><b-icon icon="power"></b-icon> Logout</span>
+            <span style="color: red"
+              ><b-icon icon="power"></b-icon> Logout</span
+            >
           </b-dropdown-item>
         </b-dropdown>
       </div>
+    </div>
+    <div class="hashTag">
+      <b-card>
+        <div>
+          This is some content within the default
+          <samp>&lt;b-card-body&gt;</samp> block of the
+          <samp>&lt;b-card&gt;</samp> component. Notice the padding between the
+          card's border and this gray <samp>&lt;div&gt;</samp>.
+        </div>
+      </b-card>
     </div>
     <h4 v-if="items.length == 0">no images</h4>
     <vue-masonry-wall :items="items" :options="options" v-else>
@@ -113,6 +134,30 @@
         </div>
       </div>
     </b-modal>
+    <b-modal
+      id="uploadImage"
+      ref="uploadImage"
+      title="上傳圖片"
+      v-model="imageModalShow"
+      hide-header-close
+      centered
+      @ok="handleOk"
+    >
+      <b-form-group label="Image" label-for="image" label-cols-sm="3">
+        <b-form-file
+          id="image"
+          accept="image/jpeg, image/png"
+          v-model="imageFile"
+        ></b-form-file>
+      </b-form-group>
+
+      <b-form-group label="Title:" label-for="title" label-cols-sm="3">
+        <b-form-input id="title" v-model="title"></b-form-input>
+      </b-form-group>
+      <b-form-group label="Category:" label-for="category" label-cols-sm="3">
+        <b-form-input id="category" v-model="category"></b-form-input>
+      </b-form-group>
+    </b-modal>
   </div>
 </template>
 <script>
@@ -126,12 +171,17 @@ import {
   rate,
   comment,
   getTags,
+  upload,
 } from "@/apis.js";
 export default {
   name: "imageWall",
   components: { VueMasonryWall },
   data() {
     return {
+      title: null,
+      category: null,
+      imageFile: null,
+      imageModalShow: false,
       Options: [
         "Apple",
         "Orange",
@@ -226,6 +276,7 @@ export default {
     getImage() {
       getImages()
         .then((response) => {
+          this.items = [];
           for (let i of response.data) {
             this.items.push({
               id: i.id,
@@ -394,6 +445,28 @@ export default {
             console.log(error);
           });
       }
+    },
+    uploadModal() {
+      this.imageModalShow = true;
+    },
+    async handleOk() {
+      let formData = new FormData();
+      formData.append("file", this.imageFile);
+      formData.append("title", this.title);
+      formData.append("category", this.category);
+      formData.append("user_id", this.$store.state.userId);
+      await upload({
+        form: formData,
+      })
+        .then(() => {
+          this.title = "";
+          this.category = "";
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+
+      this.getImage();
     },
   },
   mounted() {
