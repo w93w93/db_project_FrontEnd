@@ -39,6 +39,9 @@
           <b-dropdown-item href="/profile">
             <span>Profile</span>
           </b-dropdown-item>
+          <b-dropdown-item @click="changePwdModal">
+            <span class="text-warning">Change Password</span>
+          </b-dropdown-item>
           <b-dropdown-divider></b-dropdown-divider>
           <b-dropdown-item @click="logout">
             <span style="color: red"
@@ -52,14 +55,10 @@
       <b-card>
         <div class="row">
           <div class="col">
-            <b-button variant="link" @click="getImage"
-              >All</b-button
-            >
+            <b-button variant="link" @click="getImage">All</b-button>
           </div>
           <div class="col" v-for="(v, i) in options" :key="i">
-            <b-button
-              variant="link"
-              @click="searchImagebyTag(v.value)"
+            <b-button variant="link" @click="searchImagebyTag(v.value)"
               >#{{ v.text }}</b-button
             >
           </div>
@@ -89,7 +88,9 @@
         <div class="col imgInfo">
           <img :src="img_url" />
           <div class="info">
-            <router-link :to="`/profile/${uploader}/${uploaderId}`">上傳者: {{ uploader }}</router-link>
+            <router-link :to="`/profile/${uploader}/${uploaderId}`"
+              >上傳者: {{ uploader }}</router-link
+            >
             <div class="icons">
               <span @click="clickLiked"
                 ><b-icon icon="hand-thumbs-up" :class="likeClass"></b-icon>
@@ -239,6 +240,19 @@
         <b-form-input id="category" v-model="category"></b-form-input>
       </b-form-group>
     </b-modal>
+    <b-modal
+      id="changePassword"
+      ref="changePassword"
+      title="更改密碼"
+      v-model="PasswordModalShow"
+      hide-header-close
+      centered
+      @ok="modifyPwd"
+    >
+      <b-form-group label="新密碼" label-for="pwd" label-cols-sm="3">
+        <b-form-input id="pwd" v-model="newPwd" type="password"></b-form-input>
+      </b-form-group>
+    </b-modal>
   </div>
 </template>
 <script>
@@ -257,13 +271,16 @@ import {
   upload,
   addNewTags,
   addImageTag,
-  removeImageTag
+  removeImageTag,
+  changePwd,
 } from "@/apis.js";
 export default {
   name: "imageWall",
   components: { VueMasonryWall },
   data() {
     return {
+      newPwd: null,
+      PasswordModalShow: false,
       RemoveT: null,
       HashTag: [],
       title: null,
@@ -304,7 +321,7 @@ export default {
       const options = this.options.filter(
         (opt) => this.HashTag.indexOf(opt.text) === -1
       );
-      
+
       // Show all options available
       return options;
     },
@@ -313,7 +330,7 @@ export default {
         (opt) => this.RemoveT.indexOf(opt.text) > -1
       );
       return removeTagId[0].value;
-    }
+    },
   },
   watch: {
     searchText(val) {
@@ -550,6 +567,9 @@ export default {
     uploadModal() {
       this.imageModalShow = true;
     },
+    changePwdModal() {
+      this.PasswordModalShow = true;
+    },
     async handleOk() {
       let formData = new FormData();
       formData.append("file", this.imageFile);
@@ -612,7 +632,7 @@ export default {
           console.log(error);
         });
     },
-    async addNewTag() {                                                                                           
+    async addNewTag() {
       await addNewTags({
         tagName: this.newTag,
       })
@@ -623,6 +643,28 @@ export default {
           console.log(error);
         });
       this.getTag();
+    },
+    modifyPwd() {
+      changePwd({
+        userId: this.$store.state.userId,
+        pwd: this.newPwd,
+      })
+        .then(() => {
+          this.newPwd = null;
+          this.makeToast();
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    },
+    makeToast() {
+      this.$bvToast.toast(`提醒您的密碼已修改，下次登入請使用新密碼!`, {
+        title: "密碼修改成功",
+        variant: 'success',
+        solid: true,
+        toaster: 'b-toaster-top-center',
+        autoHideDelay: 3000
+      });
     },
   },
   mounted() {

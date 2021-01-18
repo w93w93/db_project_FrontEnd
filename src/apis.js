@@ -21,3 +21,4 @@ export const getImageByTagId = data => API.get(`/api/get_img_by_tag?tag_id=${dat
 export const getTagByImageId = data => API.get(`/api/get_tag_of_img?img_id=${data.imageId}`);
 export const getUserFavorite = data => API.get(`/api/get_user_favorite?user_id=${data.userId}`);
 export const upload = data => API.post(`/api/upload`, data.form);
+export const changePwd = data => API.get(`/api/change_password?user_id=${data.userId}&password=${data.pwd}`);
